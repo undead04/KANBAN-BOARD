@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, X, Filter, RotateCcw } from 'lucide-react';
-import { useKanbanStore } from '../../store/kanbanStore';
+import { useKanbanStore, filterTasks } from '../../store/kanbanStore';
 import type { Priority } from '../../types/kanban';
 
 const PRIORITY_OPTIONS: { value: Priority | 'all'; label: string; colorClass?: string }[] = [
@@ -21,20 +21,24 @@ const TAG_OPTIONS: { value: string; label: string; bgClass: string }[] = [
 ];
 
 export const SearchAndFilter: React.FC = () => {
-  const searchQuery = useKanbanStore((state) => state.searchQuery);
-  const priorityFilter = useKanbanStore((state) => state.priorityFilter);
-  const tagFilter = useKanbanStore((state) => state.tagFilter);
+  const searchQuery = useKanbanStore((state) => state.searchQuery || '');
+  const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
+  const tagFilter = useKanbanStore((state) => state.tagFilter || 'all');
 
   const setSearchQuery = useKanbanStore((state) => state.setSearchQuery);
   const setPriorityFilter = useKanbanStore((state) => state.setPriorityFilter);
   const setTagFilter = useKanbanStore((state) => state.setTagFilter);
   const resetFilters = useKanbanStore((state) => state.resetFilters);
 
-  const totalTasks = useKanbanStore((state) => state.tasks.length);
-  const filteredTasksCount = useKanbanStore((state) => state.getFilteredTasks().length);
+  const tasks = useKanbanStore((state) => state.tasks);
+  const totalTasks = tasks.length;
+  const filteredTasksCount = React.useMemo(
+    () => filterTasks(tasks, searchQuery, priorityFilter, tagFilter).length,
+    [tasks, searchQuery, priorityFilter, tagFilter]
+  );
 
   const isFiltering =
-    searchQuery.trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
+    (searchQuery || '').trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
 
   return (
     <div className="border-b border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-2.5 transition-colors">
@@ -139,3 +143,4 @@ export const SearchAndFilter: React.FC = () => {
     </div>
   );
 };
+

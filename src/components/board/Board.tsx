@@ -15,7 +15,7 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ColumnContainer } from './ColumnContainer';
 import { TaskCard } from './TaskCard';
 import { Plus } from 'lucide-react';
-import { useKanbanStore } from '../../store/kanbanStore';
+import { useKanbanStore, filterTasks } from '../../store/kanbanStore';
 import type { Task, Priority, Column } from '../../types/kanban';
 import { TaskModal } from '../modals/TaskModal';
 import { ColumnModal } from '../modals/ColumnModal';
@@ -24,14 +24,18 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 export const Board: React.FC = () => {
   const columns = useKanbanStore((state) => state.columns);
   const allTasks = useKanbanStore((state) => state.tasks);
-  const filteredTasks = useKanbanStore((state) => state.getFilteredTasks());
 
-  const searchQuery = useKanbanStore((state) => state.searchQuery);
-  const priorityFilter = useKanbanStore((state) => state.priorityFilter);
-  const tagFilter = useKanbanStore((state) => state.tagFilter);
+  const searchQuery = useKanbanStore((state) => state.searchQuery || '');
+  const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
+  const tagFilter = useKanbanStore((state) => state.tagFilter || 'all');
+
+  const filteredTasks = React.useMemo(
+    () => filterTasks(allTasks, searchQuery, priorityFilter, tagFilter),
+    [allTasks, searchQuery, priorityFilter, tagFilter]
+  );
 
   const isFiltering =
-    searchQuery.trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
+    (searchQuery || '').trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
 
   // Task actions
   const addTask = useKanbanStore((state) => state.addTask);

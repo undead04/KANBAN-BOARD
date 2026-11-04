@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useKanbanStore } from '../kanbanStore';
+import { useKanbanStore, filterTasks } from '../kanbanStore';
 
 describe('kanbanStore - Search & Filters (Milestone 6 - Spec-Driven Tests)', () => {
   beforeEach(() => {
@@ -159,5 +159,30 @@ describe('kanbanStore - Search & Filters (Milestone 6 - Spec-Driven Tests)', () 
       expect(state.priorityFilter).toBe('all');
       expect(state.tagFilter).toBe('all');
     });
+
+    it('filterTasks xử lý an toàn khi các giá trị lọc bị undefined hoặc null (không ném TypeError trim)', () => {
+      const allTasks = useKanbanStore.getState().tasks;
+      const resultUndefined = filterTasks(allTasks, undefined, undefined, undefined);
+      expect(resultUndefined.length).toBe(allTasks.length);
+
+      const resultNull = filterTasks(allTasks, null as unknown as string, null as unknown as 'all', null as unknown as string);
+      expect(resultNull.length).toBe(allTasks.length);
+
+      // Thẻ có description hoặc title rỗng
+      const tasksWithMissingFields = [
+        {
+          id: 'test-1',
+          columnId: 'col-1',
+          title: 'Title only',
+          description: '',
+          priority: 'low' as const,
+          colorTag: 'sky',
+          createdAt: '',
+        },
+      ];
+      expect(filterTasks(tasksWithMissingFields, 'title').length).toBe(1);
+    });
   });
 });
+
+

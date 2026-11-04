@@ -38,8 +38,47 @@ interface KanbanState {
   resetToInitialData: () => void;
 }
 
+export function filterTasks(
+  tasks: Task[],
+  searchQuery: string = '',
+  priorityFilter: Priority | 'all' = 'all',
+  tagFilter: string | 'all' = 'all'
+): Task[] {
+  const query = (searchQuery || '').trim().toLowerCase();
+  const safePriority = priorityFilter || 'all';
+  const safeTag = tagFilter || 'all';
+
+  return (tasks || []).filter((task) => {
+    // 1. Kiểm tra từ khóa
+    if (query) {
+      const matchTitle = (task.title || '').toLowerCase().includes(query);
+      const matchDescription = (task.description || '')
+        .toLowerCase()
+        .includes(query);
+      if (!matchTitle && !matchDescription) return false;
+    }
+
+    // 2. Kiểm tra độ ưu tiên
+    if (safePriority !== 'all' && task.priority !== safePriority) {
+      return false;
+    }
+
+    // 3. Kiểm tra nhãn màu
+    if (safeTag !== 'all' && task.colorTag !== safeTag) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export type KanbanPersistedState = {
+  columns: Column[];
+  tasks: Task[];
+};
+
 export const useKanbanStore = create<KanbanState>()(
-  persist(
+  persist<KanbanState, [], [], KanbanPersistedState>(
     (set, get) => ({
       columns: INITIAL_COLUMNS,
       tasks: INITIAL_TASKS,
@@ -50,15 +89,15 @@ export const useKanbanStore = create<KanbanState>()(
       tagFilter: 'all',
 
       setSearchQuery: (query: string) => {
-        set({ searchQuery: query });
+        set({ searchQuery: query || '' });
       },
 
       setPriorityFilter: (priority: Priority | 'all') => {
-        set({ priorityFilter: priority });
+        set({ priorityFilter: priority || 'all' });
       },
 
       setTagFilter: (tag: string | 'all') => {
-        set({ tagFilter: tag });
+        set({ tagFilter: tag || 'all' });
       },
 
       resetFilters: () => {
@@ -70,31 +109,8 @@ export const useKanbanStore = create<KanbanState>()(
       },
 
       getFilteredTasks: () => {
-        const { tasks, searchQuery, priorityFilter, tagFilter } = get();
-        const query = searchQuery.trim().toLowerCase();
-
-        return tasks.filter((task) => {
-          // 1. Kiểm tra từ khóa
-          if (query) {
-            const matchTitle = task.title.toLowerCase().includes(query);
-            const matchDescription = (task.description || '')
-              .toLowerCase()
-              .includes(query);
-            if (!matchTitle && !matchDescription) return false;
-          }
-
-          // 2. Kiểm tra độ ưu tiên
-          if (priorityFilter !== 'all' && task.priority !== priorityFilter) {
-            return false;
-          }
-
-          // 3. Kiểm tra nhãn màu
-          if (tagFilter !== 'all' && task.colorTag !== tagFilter) {
-            return false;
-          }
-
-          return true;
-        });
+        const { tasks = [], searchQuery = '', priorityFilter = 'all', tagFilter = 'all' } = get();
+        return filterTasks(tasks, searchQuery, priorityFilter, tagFilter);
       },
 
       addTask: (taskData: NewTaskInput) => {
@@ -236,6 +252,17 @@ export const useKanbanStore = create<KanbanState>()(
         columns: state.columns,
         tasks: state.tasks,
       }),
+      merge: (persistedState: unknown, currentState: KanbanState) => {
+        const typedPersisted = (persistedState as Partial<KanbanState>) || {};
+        return {
+          ...currentState,
+          ...typedPersisted,
+          // Đảm bảo các trường filter luôn có giá trị mặc định hợp lệ khi nạp từ storage cũ
+          searchQuery: '',
+          priorityFilter: 'all',
+          tagFilter: 'all',
+        };
+      },
     }
   )
 );
