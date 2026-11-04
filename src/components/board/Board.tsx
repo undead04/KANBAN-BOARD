@@ -1,14 +1,12 @@
 import React from 'react';
-import type { Column, Task } from '../../types/kanban';
 import { ColumnContainer } from './ColumnContainer';
 import { Plus } from 'lucide-react';
+import { useKanbanStore } from '../../store/kanbanStore';
 
-interface BoardProps {
-  columns: Column[];
-  tasks: Task[];
-}
+export const Board: React.FC = () => {
+  const columns = useKanbanStore((state) => state.columns);
+  const tasks = useKanbanStore((state) => state.tasks);
 
-export const Board: React.FC<BoardProps> = ({ columns, tasks }) => {
   return (
     <div className="flex-1 overflow-x-auto p-6">
       <div className="flex items-start gap-5 min-w-max pb-6">
