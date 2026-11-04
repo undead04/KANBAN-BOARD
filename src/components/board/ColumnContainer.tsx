@@ -42,7 +42,11 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
     },
   });
 
-  const safeTasks = (tasks || []).filter((t): t is Task => Boolean(t && t.id));
+  // Đảm bảo không có phần tử null và lọc ID trùng lặp để SortableContext không bao giờ bị crash
+  const safeTasks = (tasks || []).filter(
+    (t, index, self): t is Task =>
+      Boolean(t && t.id) && self.findIndex((s) => s && s.id === t.id) === index
+  );
   const taskIds = safeTasks.map((t) => t.id);
   const countDisplay = isFiltering ? `${safeTasks.length}/${totalCount || 0}` : (totalCount || 0);
 

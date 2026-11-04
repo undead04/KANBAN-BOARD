@@ -29,6 +29,7 @@ export const Board: React.FC = () => {
   const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
   const tagFilter = useKanbanStore((state) => state.tagFilter || 'all');
   const sortBy = useKanbanStore((state) => state.sortBy || 'manual');
+  const setSortBy = useKanbanStore((state) => state.setSortBy);
 
   const filteredTasks = useMemo(
     () => filterTasks(allTasks, searchQuery, priorityFilter, tagFilter, sortBy),
@@ -86,49 +87,66 @@ export const Board: React.FC = () => {
 
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const foundTask = allTasks.find((t) => t && t.id === active.id);
-    if (foundTask) {
-      setActiveTask(foundTask);
+    try {
+      const { active } = event;
+      // Khi người dùng kéo thả thủ công, chuyển sang chế độ manual để không bị thuật toán auto-sort ép lại
+      if (sortBy !== 'manual') {
+        setSortBy('manual');
+      }
+      const foundTask = allTasks.find((t) => t && t.id === active.id);
+      if (foundTask) {
+        setActiveTask(foundTask);
+      }
+    } catch (err) {
+      console.error('Error in handleDragStart:', err);
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
+    try {
+      const { active, over } = event;
+      if (!over) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    if (activeId === overId) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      if (!activeId || !overId || activeId === overId) return;
 
-    const activeTaskItem = allTasks.find((t) => t && t.id === activeId);
-    if (!activeTaskItem) return;
+      const activeTaskItem = allTasks.find((t) => t && t.id === activeId);
+      if (!activeTaskItem) return;
 
-    // 1. Kéo qua một Task ở cột khác
-    const overTaskItem = allTasks.find((t) => t && t.id === overId);
-    if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
-      moveTask(activeId, overId);
-      return;
-    }
+      // 1. Kéo qua một Task ở cột khác
+      const overTaskItem = allTasks.find((t) => t && t.id === overId);
+      if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
+        moveTask(activeId, overId);
+        return;
+      }
 
-    // 2. Kéo qua một Column khác (ví dụ cột rỗng)
-    const overColumnItem = columns.find((c) => c && c.id === overId);
-    if (overColumnItem && activeTaskItem.columnId !== overColumnItem.id) {
-      moveTask(activeId, overId);
-      return;
+      // 2. Kéo qua một Column khác (ví dụ cột rỗng)
+      const overColumnItem = columns.find((c) => c && c.id === overId);
+      if (overColumnItem && activeTaskItem.columnId !== overColumnItem.id) {
+        moveTask(activeId, overId);
+        return;
+      }
+    } catch (err) {
+      console.error('Error in handleDragOver:', err);
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
+    try {
+      const { active, over } = event;
+      setActiveTask(null);
 
-    if (!over) return;
-    const activeId = active.id as string;
-    const overId = over.id as string;
+      if (!over) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-    if (activeId !== overId) {
-      moveTask(activeId, overId);
+      if (activeId && overId && activeId !== overId) {
+        moveTask(activeId, overId);
+      }
+    } catch (err) {
+      console.error('Error in handleDragEnd:', err);
+      setActiveTask(null);
     }
   };
 
@@ -244,13 +262,8 @@ export const Board: React.FC = () => {
           </button>
         </div>
 
-        {/* Drag Overlay Preview */}
-        <DragOverlay
-          dropAnimation={{
-            duration: 200,
-            easing: 'ease',
-          }}
-        >
+        {/* Drag Overlay Preview with null dropAnimation to prevent race-condition crashes */}
+        <DragOverlay dropAnimation={null}>
           {activeTask ? <TaskCard task={activeTask} isOverlay /> : null}
         </DragOverlay>
 
