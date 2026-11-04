@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { arrayMove } from '@dnd-kit/sortable';
-import type { Column, Task } from '../types/kanban';
+import type { Column, Task, Priority } from '../types/kanban';
 import { INITIAL_COLUMNS, INITIAL_TASKS } from '../data/initialData';
 
 export type NewTaskInput = Omit<Task, 'id' | 'createdAt'>;
@@ -10,24 +10,92 @@ export type UpdateTaskInput = Partial<Omit<Task, 'id' | 'createdAt'>>;
 interface KanbanState {
   columns: Column[];
   tasks: Task[];
+
+  // Filter state
+  searchQuery: string;
+  priorityFilter: Priority | 'all';
+  tagFilter: string | 'all';
+
+  // Filter actions
+  setSearchQuery: (query: string) => void;
+  setPriorityFilter: (priority: Priority | 'all') => void;
+  setTagFilter: (tag: string | 'all') => void;
+  resetFilters: () => void;
+  getFilteredTasks: () => Task[];
+
   // Task actions
   addTask: (taskData: NewTaskInput) => void;
   updateTask: (id: string, updates: UpdateTaskInput) => void;
   deleteTask: (id: string) => void;
   moveTask: (activeId: string, overId: string) => void;
+
   // Column actions
   addColumn: (title: string) => void;
   updateColumn: (id: string, title: string) => void;
   deleteColumn: (id: string) => void;
+
   // Reset
   resetToInitialData: () => void;
 }
 
 export const useKanbanStore = create<KanbanState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       columns: INITIAL_COLUMNS,
       tasks: INITIAL_TASKS,
+
+      // Filter initial state
+      searchQuery: '',
+      priorityFilter: 'all',
+      tagFilter: 'all',
+
+      setSearchQuery: (query: string) => {
+        set({ searchQuery: query });
+      },
+
+      setPriorityFilter: (priority: Priority | 'all') => {
+        set({ priorityFilter: priority });
+      },
+
+      setTagFilter: (tag: string | 'all') => {
+        set({ tagFilter: tag });
+      },
+
+      resetFilters: () => {
+        set({
+          searchQuery: '',
+          priorityFilter: 'all',
+          tagFilter: 'all',
+        });
+      },
+
+      getFilteredTasks: () => {
+        const { tasks, searchQuery, priorityFilter, tagFilter } = get();
+        const query = searchQuery.trim().toLowerCase();
+
+        return tasks.filter((task) => {
+          // 1. Kiểm tra từ khóa
+          if (query) {
+            const matchTitle = task.title.toLowerCase().includes(query);
+            const matchDescription = (task.description || '')
+              .toLowerCase()
+              .includes(query);
+            if (!matchTitle && !matchDescription) return false;
+          }
+
+          // 2. Kiểm tra độ ưu tiên
+          if (priorityFilter !== 'all' && task.priority !== priorityFilter) {
+            return false;
+          }
+
+          // 3. Kiểm tra nhãn màu
+          if (tagFilter !== 'all' && task.colorTag !== tagFilter) {
+            return false;
+          }
+
+          return true;
+        });
+      },
 
       addTask: (taskData: NewTaskInput) => {
         const newTask: Task = {
@@ -155,11 +223,19 @@ export const useKanbanStore = create<KanbanState>()(
         set({
           columns: INITIAL_COLUMNS,
           tasks: INITIAL_TASKS,
+          searchQuery: '',
+          priorityFilter: 'all',
+          tagFilter: 'all',
         });
       },
     }),
     {
       name: 'kanban-board-storage',
+      // Chỉ lưu trữ columns và tasks vào localStorage, filter là session-state
+      partialize: (state) => ({
+        columns: state.columns,
+        tasks: state.tasks,
+      }),
     }
   )
 );
