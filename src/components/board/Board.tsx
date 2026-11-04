@@ -1,11 +1,65 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ColumnContainer } from './ColumnContainer';
 import { Plus } from 'lucide-react';
 import { useKanbanStore } from '../../store/kanbanStore';
+import type { Task, Priority } from '../../types/kanban';
+import { TaskModal } from '../modals/TaskModal';
+import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 export const Board: React.FC = () => {
   const columns = useKanbanStore((state) => state.columns);
   const tasks = useKanbanStore((state) => state.tasks);
+  const addTask = useKanbanStore((state) => state.addTask);
+  const updateTask = useKanbanStore((state) => state.updateTask);
+  const deleteTask = useKanbanStore((state) => state.deleteTask);
+
+  // Modal states
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
+  const [targetColumnId, setTargetColumnId] = useState<string>('');
+
+  // Confirm delete dialog states
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+
+  const handleOpenAdd = (columnId: string) => {
+    setTaskToEdit(null);
+    setTargetColumnId(columnId);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleOpenEdit = (task: Task) => {
+    setTaskToEdit(task);
+    setTargetColumnId(task.columnId);
+    setIsTaskModalOpen(true);
+  };
+
+  const handleOpenDelete = (task: Task) => {
+    setTaskToDelete(task);
+    setIsConfirmOpen(true);
+  };
+
+  const handleSaveTask = (taskData: {
+    title: string;
+    description: string;
+    columnId: string;
+    priority: Priority;
+    dueDate?: string;
+    colorTag: string;
+  }) => {
+    if (taskToEdit) {
+      updateTask(taskToEdit.id, taskData);
+    } else {
+      addTask(taskData);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (taskToDelete) {
+      deleteTask(taskToDelete.id);
+      setTaskToDelete(null);
+    }
+  };
 
   return (
     <div className="flex-1 overflow-x-auto p-6">
@@ -17,6 +71,9 @@ export const Board: React.FC = () => {
               key={column.id}
               column={column}
               tasks={columnTasks}
+              onAddTask={handleOpenAdd}
+              onEditTask={handleOpenEdit}
+              onDeleteTask={handleOpenDelete}
             />
           );
         })}
@@ -30,6 +87,34 @@ export const Board: React.FC = () => {
           Thêm cột mới
         </button>
       </div>
+
+      {/* Task Modal (Create & Edit) */}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onSave={handleSaveTask}
+        taskToEdit={taskToEdit}
+        defaultColumnId={targetColumnId}
+        columns={columns}
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="Xác nhận xóa công việc"
+        message={
+          taskToDelete
+            ? `Bạn có chắc muốn xóa công việc "${taskToDelete.title}"? Dữ liệu sẽ không thể khôi phục.`
+            : undefined
+        }
+        confirmLabel="Xóa công việc"
+        cancelLabel="Hủy bỏ"
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          setIsConfirmOpen(false);
+          setTaskToDelete(null);
+        }}
+      />
     </div>
   );
 };

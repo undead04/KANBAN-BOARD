@@ -27,6 +27,7 @@ Hướng dẫn dành riêng cho AI Agent khi phát triển dự án Kanban Board
 ## 5. Điều cấm (Strict Constraints)
 - **Cấm** cài thêm thư viện state khác (Redux, MobX, Context API rườm rà).
 - **Cấm** tự ý refactor hoặc xóa code ngoài phạm vi milestone đang làm.
+- **Cấm** tự ý `git push` hoặc tạo Pull Request khi người dùng chưa đồng ý hoặc chưa yêu cầu đích danh. Mọi thay đổi trong quá trình code chỉ commit ở local.
 - **Cấm** nhảy cóc milestone: Phải chạy và kiểm chứng xong bước hiện tại mới làm bước sau.
 
 ## 6. Quy trình triển khai
