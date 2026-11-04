@@ -30,6 +30,8 @@ Hướng dẫn dành riêng cho AI Agent khi phát triển dự án Kanban Board
 - **Cấm** tự ý `git push` hoặc tạo Pull Request khi người dùng chưa đồng ý hoặc chưa yêu cầu đích danh. Mọi thay đổi trong quá trình code chỉ commit ở local.
 - **Cấm** nhảy cóc milestone: Phải chạy và kiểm chứng xong bước hiện tại mới làm bước sau.
 
-## 6. Quy trình triển khai
+## 6. Quy trình triển khai & Kích hoạt Skills
 - Thực hiện tuần tự 6 milestones trong [docs/PLAN.md](docs/PLAN.md).
 - Gặp lỗi: Tự đọc log terminal/console, tự sửa đến khi chạy được mới báo hoàn thành.
+- **Khi viết Test:** Bắt buộc kích hoạt skill `.gemini/skills/rigorous-testing/` (test theo SPEC, bao phủ edge cases, cấm viết test xuôi theo code).
+- **Khi làm việc với Git:** Tuân thủ skill `.gemini/skills/github-workflow/` (tách branch trước khi code, commit ở local; chỉ push/PR khi được yêu cầu).
