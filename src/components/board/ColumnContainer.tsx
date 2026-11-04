@@ -19,6 +19,7 @@ interface ColumnContainerProps {
   onDeleteTask: (task: Task) => void;
   onRenameColumn: (columnId: string, newTitle: string) => void;
   onDeleteColumn: (column: Column) => void;
+  onSortPriority?: (columnId: string) => void;
 }
 
 export const ColumnContainer: React.FC<ColumnContainerProps> = ({
@@ -31,6 +32,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
   onDeleteTask,
   onRenameColumn,
   onDeleteColumn,
+  onSortPriority,
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
@@ -58,6 +60,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
         taskCount={countDisplay}
         onRename={onRenameColumn}
         onDelete={onDeleteColumn}
+        onSortPriority={onSortPriority}
       />
 
       {/* Task List (Droppable & Sortable area) */}
@@ -80,13 +83,13 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
         </SortableContext>
 
         {/* Empty States */}
-        {totalCount === 0 && (
+        {(totalCount || 0) === 0 && (
           <div className="h-32 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-center text-xs text-slate-400 select-none">
             Kéo thả hoặc thêm thẻ mới vào đây
           </div>
         )}
 
-        {totalCount > 0 && tasks.length === 0 && (
+        {(totalCount || 0) > 0 && safeTasks.length === 0 && (
           <div className="h-32 border-2 border-dashed border-slate-200/80 dark:border-slate-800/80 rounded-xl flex flex-col items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 select-none p-4 text-center">
             <SearchX className="w-5 h-5 text-slate-400" />
             <span>Không có thẻ khớp bộ lọc</span>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -28,14 +28,18 @@ export const Board: React.FC = () => {
   const searchQuery = useKanbanStore((state) => state.searchQuery || '');
   const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
   const tagFilter = useKanbanStore((state) => state.tagFilter || 'all');
+  const sortBy = useKanbanStore((state) => state.sortBy || 'manual');
 
-  const filteredTasks = React.useMemo(
-    () => filterTasks(allTasks, searchQuery, priorityFilter, tagFilter),
-    [allTasks, searchQuery, priorityFilter, tagFilter]
+  const filteredTasks = useMemo(
+    () => filterTasks(allTasks, searchQuery, priorityFilter, tagFilter, sortBy),
+    [allTasks, searchQuery, priorityFilter, tagFilter, sortBy]
   );
 
   const isFiltering =
-    (searchQuery || '').trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
+    (searchQuery || '').trim() !== '' ||
+    priorityFilter !== 'all' ||
+    tagFilter !== 'all' ||
+    sortBy !== 'manual';
 
   // Task actions
   const addTask = useKanbanStore((state) => state.addTask);
@@ -47,6 +51,7 @@ export const Board: React.FC = () => {
   const addColumn = useKanbanStore((state) => state.addColumn);
   const updateColumn = useKanbanStore((state) => state.updateColumn);
   const deleteColumn = useKanbanStore((state) => state.deleteColumn);
+  const sortColumnByPriority = useKanbanStore((state) => state.sortColumnByPriority);
 
   // Drag and drop state
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -190,7 +195,7 @@ export const Board: React.FC = () => {
 
   // Count tasks in column to be deleted for warning message
   const tasksInColumnToDelete = columnToDelete
-    ? allTasks.filter((t) => t && t.columnId === columnToDelete.id).length
+    ? (allTasks || []).filter((t) => t && t.columnId === columnToDelete.id).length
     : 0;
 
   return (
@@ -203,7 +208,7 @@ export const Board: React.FC = () => {
     >
       <div className="flex-1 overflow-x-auto p-4 sm:p-6">
         <div className="flex items-start gap-5 min-w-max pb-6">
-          {(columns || []).filter(Boolean).map((column) => {
+          {columns.filter(Boolean).map((column) => {
             const columnDisplayedTasks = filteredTasks.filter(
               (task) => task && task.columnId === column.id
             );
@@ -223,6 +228,7 @@ export const Board: React.FC = () => {
                 onDeleteTask={handleOpenDeleteTask}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleOpenDeleteColumn}
+                onSortPriority={(colId) => sortColumnByPriority(colId, 'desc')}
               />
             );
           })}

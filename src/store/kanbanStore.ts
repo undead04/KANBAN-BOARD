@@ -6,22 +6,32 @@ import { INITIAL_COLUMNS, INITIAL_TASKS } from '../data/initialData';
 
 export type NewTaskInput = Omit<Task, 'id' | 'createdAt'>;
 export type UpdateTaskInput = Partial<Omit<Task, 'id' | 'createdAt'>>;
+export type SortOption = 'manual' | 'priority-desc' | 'priority-asc' | 'dueDate';
+
+export const PRIORITY_WEIGHT: Record<Priority, number> = {
+  high: 3,
+  medium: 2,
+  low: 1,
+};
 
 interface KanbanState {
   columns: Column[];
   tasks: Task[];
 
-  // Filter state
+  // Filter & Sort state
   searchQuery: string;
   priorityFilter: Priority | 'all';
   tagFilter: string | 'all';
+  sortBy: SortOption;
 
-  // Filter actions
+  // Filter & Sort actions
   setSearchQuery: (query: string) => void;
   setPriorityFilter: (priority: Priority | 'all') => void;
   setTagFilter: (tag: string | 'all') => void;
+  setSortBy: (sort: SortOption) => void;
   resetFilters: () => void;
   getFilteredTasks: () => Task[];
+  sortColumnByPriority: (columnId: string, direction?: 'desc' | 'asc') => void;
 
   // Task actions
   addTask: (taskData: NewTaskInput) => void;
@@ -42,13 +52,14 @@ export function filterTasks(
   tasks: Task[],
   searchQuery: string = '',
   priorityFilter: Priority | 'all' = 'all',
-  tagFilter: string | 'all' = 'all'
+  tagFilter: string | 'all' = 'all',
+  sortBy: SortOption = 'manual'
 ): Task[] {
   const query = (searchQuery || '').trim().toLowerCase();
   const safePriority = priorityFilter || 'all';
   const safeTag = tagFilter || 'all';
 
-  return (tasks || []).filter((task): task is Task => {
+  const filtered = (tasks || []).filter((task): task is Task => {
     if (!task || typeof task !== 'object') return false;
 
     // 1. Kiểm tra từ khóa
@@ -72,6 +83,32 @@ export function filterTasks(
 
     return true;
   });
+
+  // Áp dụng thuật toán sắp xếp
+  if (sortBy === 'priority-desc') {
+    return [...filtered].sort(
+      (a, b) =>
+        (PRIORITY_WEIGHT[b.priority] ?? 0) - (PRIORITY_WEIGHT[a.priority] ?? 0)
+    );
+  }
+
+  if (sortBy === 'priority-asc') {
+    return [...filtered].sort(
+      (a, b) =>
+        (PRIORITY_WEIGHT[a.priority] ?? 0) - (PRIORITY_WEIGHT[b.priority] ?? 0)
+    );
+  }
+
+  if (sortBy === 'dueDate') {
+    return [...filtered].sort((a, b) => {
+      if (!a.dueDate && !b.dueDate) return 0;
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+    });
+  }
+
+  return filtered;
 }
 
 export type KanbanPersistedState = {
@@ -85,10 +122,11 @@ export const useKanbanStore = create<KanbanState>()(
       columns: INITIAL_COLUMNS,
       tasks: INITIAL_TASKS,
 
-      // Filter initial state
+      // Filter & Sort initial state
       searchQuery: '',
       priorityFilter: 'all',
       tagFilter: 'all',
+      sortBy: 'manual',
 
       setSearchQuery: (query: string) => {
         set({ searchQuery: query || '' });
@@ -102,17 +140,54 @@ export const useKanbanStore = create<KanbanState>()(
         set({ tagFilter: tag || 'all' });
       },
 
+      setSortBy: (sort: SortOption) => {
+        set({ sortBy: sort || 'manual' });
+      },
+
       resetFilters: () => {
         set({
           searchQuery: '',
           priorityFilter: 'all',
           tagFilter: 'all',
+          sortBy: 'manual',
         });
       },
 
       getFilteredTasks: () => {
-        const { tasks = [], searchQuery = '', priorityFilter = 'all', tagFilter = 'all' } = get();
-        return filterTasks(tasks, searchQuery, priorityFilter, tagFilter);
+        const {
+          tasks = [],
+          searchQuery = '',
+          priorityFilter = 'all',
+          tagFilter = 'all',
+          sortBy = 'manual',
+        } = get();
+        return filterTasks(tasks, searchQuery, priorityFilter, tagFilter, sortBy);
+      },
+
+      sortColumnByPriority: (columnId: string, direction: 'desc' | 'asc' = 'desc') => {
+        set((state) => {
+          const tasks = state.tasks || [];
+          const columnTasks = tasks.filter((t) => t && t.columnId === columnId);
+          if (columnTasks.length <= 1) return state;
+
+          const sortedColumnTasks = [...columnTasks].sort((a, b) => {
+            const weightA = PRIORITY_WEIGHT[a.priority] ?? 0;
+            const weightB = PRIORITY_WEIGHT[b.priority] ?? 0;
+            return direction === 'desc' ? weightB - weightA : weightA - weightB;
+          });
+
+          let sortIndex = 0;
+          const newTasks = tasks.map((task) => {
+            if (task && task.columnId === columnId) {
+              const replaced = sortedColumnTasks[sortIndex];
+              sortIndex++;
+              return replaced;
+            }
+            return task;
+          });
+
+          return { tasks: newTasks };
+        });
       },
 
       addTask: (taskData: NewTaskInput) => {
@@ -121,9 +196,22 @@ export const useKanbanStore = create<KanbanState>()(
           id: `task-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
           createdAt: new Date().toISOString(),
         };
-        set((state) => ({
-          tasks: [...state.tasks, newTask],
-        }));
+
+        set((state) => {
+          const tasks = state.tasks || [];
+          // Nếu thẻ có độ ưu tiên cao (high), tự động ưu tiên xếp lên đầu cột của nó!
+          if (newTask.priority === 'high') {
+            const firstIndexInCol = tasks.findIndex(
+              (t) => t && t.columnId === newTask.columnId
+            );
+            if (firstIndexInCol !== -1) {
+              const newTasks = [...tasks];
+              newTasks.splice(firstIndexInCol, 0, newTask);
+              return { tasks: newTasks };
+            }
+          }
+          return { tasks: [...tasks, newTask] };
+        });
       },
 
       updateTask: (id: string, updates: UpdateTaskInput) => {
@@ -249,6 +337,7 @@ export const useKanbanStore = create<KanbanState>()(
           searchQuery: '',
           priorityFilter: 'all',
           tagFilter: 'all',
+          sortBy: 'manual',
         });
       },
     }),
@@ -266,6 +355,7 @@ export const useKanbanStore = create<KanbanState>()(
             searchQuery: '',
             priorityFilter: 'all',
             tagFilter: 'all',
+            sortBy: 'manual',
           };
         }
 
@@ -299,10 +389,10 @@ export const useKanbanStore = create<KanbanState>()(
               ? validColumns
               : currentState.columns,
           tasks: validTasks !== null ? validTasks : currentState.tasks,
-          // Đảm bảo các trường filter luôn có giá trị mặc định hợp lệ khi nạp từ storage cũ
           searchQuery: '',
           priorityFilter: 'all',
           tagFilter: 'all',
+          sortBy: 'manual',
         };
       },
     }
