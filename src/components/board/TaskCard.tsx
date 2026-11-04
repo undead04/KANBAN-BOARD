@@ -1,9 +1,11 @@
 import React from 'react';
 import type { Task, Priority } from '../../types/kanban';
-import { Calendar, MoreVertical, Flag } from 'lucide-react';
+import { Calendar, Trash2, Flag } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
+  onEdit?: (task: Task) => void;
+  onDelete?: (task: Task) => void;
 }
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; badgeClass: string; iconClass: string }> = {
@@ -33,16 +35,19 @@ const COLOR_TAG_MAP: Record<string, string> = {
   indigo: 'bg-indigo-500',
 };
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, onDelete }) => {
   const priorityInfo = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const tagColorClass = COLOR_TAG_MAP[task.colorTag] || 'bg-slate-400';
 
   return (
-    <div className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/90 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-grab active:cursor-grabbing">
+    <div
+      onClick={() => onEdit?.(task)}
+      className="group relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/90 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 cursor-pointer active:scale-[0.99]"
+    >
       {/* Color tag stripe on the left */}
       <div className={`absolute top-3 left-0 w-1 h-6 rounded-r-full ${tagColorClass}`} />
 
-      {/* Header: Priority & Action button */}
+      {/* Header: Priority & Delete button */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <span
           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${priorityInfo.badgeClass}`}
@@ -53,10 +58,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
 
         <button
           type="button"
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-          aria-label="Tùy chọn thẻ"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete?.(task);
+          }}
+          className="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 transition opacity-70 group-hover:opacity-100"
+          aria-label="Xóa thẻ"
+          title="Xóa thẻ công việc"
         >
-          <MoreVertical className="w-4 h-4" />
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
 

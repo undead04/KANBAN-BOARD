@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
               </h1>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <Sparkles className="w-3 h-3" />
-                Milestone 2: Store & Theme
+                Milestone 3: Task CRUD
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
