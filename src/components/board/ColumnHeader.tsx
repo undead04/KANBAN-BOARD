@@ -4,7 +4,7 @@ import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 interface ColumnHeaderProps {
   column: Column;
-  taskCount: number;
+  taskCount: string | number;
   onRename: (columnId: string, newTitle: string) => void;
   onDelete: (column: Column) => void;
 }

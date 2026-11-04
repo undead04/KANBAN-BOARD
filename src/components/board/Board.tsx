@@ -23,7 +23,15 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 export const Board: React.FC = () => {
   const columns = useKanbanStore((state) => state.columns);
-  const tasks = useKanbanStore((state) => state.tasks);
+  const allTasks = useKanbanStore((state) => state.tasks);
+  const filteredTasks = useKanbanStore((state) => state.getFilteredTasks());
+
+  const searchQuery = useKanbanStore((state) => state.searchQuery);
+  const priorityFilter = useKanbanStore((state) => state.priorityFilter);
+  const tagFilter = useKanbanStore((state) => state.tagFilter);
+
+  const isFiltering =
+    searchQuery.trim() !== '' || priorityFilter !== 'all' || tagFilter !== 'all';
 
   // Task actions
   const addTask = useKanbanStore((state) => state.addTask);
@@ -59,7 +67,7 @@ export const Board: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Requires dragging 5px before starting drag, allowing pure clicks
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -70,7 +78,7 @@ export const Board: React.FC = () => {
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const foundTask = tasks.find((t) => t.id === active.id);
+    const foundTask = allTasks.find((t) => t.id === active.id);
     if (foundTask) {
       setActiveTask(foundTask);
     }
@@ -84,11 +92,11 @@ export const Board: React.FC = () => {
     const overId = over.id as string;
     if (activeId === overId) return;
 
-    const activeTaskItem = tasks.find((t) => t.id === activeId);
+    const activeTaskItem = allTasks.find((t) => t.id === activeId);
     if (!activeTaskItem) return;
 
     // 1. Kéo qua một Task ở cột khác
-    const overTaskItem = tasks.find((t) => t.id === overId);
+    const overTaskItem = allTasks.find((t) => t.id === overId);
     if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
       moveTask(activeId, overId);
       return;
@@ -178,7 +186,7 @@ export const Board: React.FC = () => {
 
   // Count tasks in column to be deleted for warning message
   const tasksInColumnToDelete = columnToDelete
-    ? tasks.filter((t) => t.columnId === columnToDelete.id).length
+    ? allTasks.filter((t) => t.columnId === columnToDelete.id).length
     : 0;
 
   return (
@@ -189,15 +197,23 @@ export const Board: React.FC = () => {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex-1 overflow-x-auto p-6">
+      <div className="flex-1 overflow-x-auto p-4 sm:p-6">
         <div className="flex items-start gap-5 min-w-max pb-6">
           {columns.map((column) => {
-            const columnTasks = tasks.filter((task) => task.columnId === column.id);
+            const columnDisplayedTasks = filteredTasks.filter(
+              (task) => task.columnId === column.id
+            );
+            const columnTotalTasks = allTasks.filter(
+              (task) => task.columnId === column.id
+            );
+
             return (
               <ColumnContainer
                 key={column.id}
                 column={column}
-                tasks={columnTasks}
+                tasks={columnDisplayedTasks}
+                totalCount={columnTotalTasks.length}
+                isFiltering={isFiltering}
                 onAddTask={handleOpenAddTask}
                 onEditTask={handleOpenEditTask}
                 onDeleteTask={handleOpenDeleteTask}
