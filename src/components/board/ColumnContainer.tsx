@@ -1,7 +1,8 @@
 import React from 'react';
 import type { Column, Task } from '../../types/kanban';
+import { ColumnHeader } from './ColumnHeader';
 import { TaskCard } from './TaskCard';
-import { Plus, MoreHorizontal } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface ColumnContainerProps {
   column: Column;
@@ -9,6 +10,8 @@ interface ColumnContainerProps {
   onAddTask: (columnId: string) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (task: Task) => void;
+  onRenameColumn: (columnId: string, newTitle: string) => void;
+  onDeleteColumn: (column: Column) => void;
 }
 
 export const ColumnContainer: React.FC<ColumnContainerProps> = ({
@@ -17,30 +20,18 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
   onAddTask,
   onEditTask,
   onDeleteTask,
+  onRenameColumn,
+  onDeleteColumn,
 }) => {
   return (
     <div className="flex flex-col flex-shrink-0 w-80 bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-3 max-h-[calc(100vh-8rem)] shadow-sm">
       {/* Column Header */}
-      <div className="flex items-center justify-between px-2 py-1.5 mb-2">
-        <div className="flex items-center gap-2">
-          <h2 className="font-bold text-sm text-slate-800 dark:text-slate-100">
-            {column.title}
-          </h2>
-          <span className="flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-semibold rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-            {tasks.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition"
-            aria-label="Tùy chọn cột"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+      <ColumnHeader
+        column={column}
+        taskCount={tasks.length}
+        onRename={onRenameColumn}
+        onDelete={onDeleteColumn}
+      />
 
       {/* Task List */}
       <div className="flex-1 overflow-y-auto space-y-3 px-0.5 py-1 min-h-[150px]">
