@@ -30,7 +30,7 @@ export const SearchAndFilter: React.FC = () => {
   const setTagFilter = useKanbanStore((state) => state.setTagFilter);
   const resetFilters = useKanbanStore((state) => state.resetFilters);
 
-  const tasks = useKanbanStore((state) => state.tasks);
+  const tasks = useKanbanStore((state) => state.tasks || []);
   const totalTasks = tasks.length;
   const filteredTasksCount = React.useMemo(
     () => filterTasks(tasks, searchQuery, priorityFilter, tagFilter).length,

@@ -40,8 +40,9 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
     },
   });
 
-  const taskIds = tasks.map((t) => t.id);
-  const countDisplay = isFiltering ? `${tasks.length}/${totalCount}` : totalCount;
+  const safeTasks = (tasks || []).filter((t): t is Task => Boolean(t && t.id));
+  const taskIds = safeTasks.map((t) => t.id);
+  const countDisplay = isFiltering ? `${safeTasks.length}/${totalCount || 0}` : (totalCount || 0);
 
   return (
     <div
@@ -68,7 +69,7 @@ export const ColumnContainer: React.FC<ColumnContainerProps> = ({
           items={taskIds}
           strategy={verticalListSortingStrategy}
         >
-          {tasks.map((task) => (
+          {safeTasks.map((task) => (
             <TaskCard
               key={task.id}
               task={task}

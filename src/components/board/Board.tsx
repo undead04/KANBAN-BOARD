@@ -22,8 +22,8 @@ import { ColumnModal } from '../modals/ColumnModal';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 export const Board: React.FC = () => {
-  const columns = useKanbanStore((state) => state.columns);
-  const allTasks = useKanbanStore((state) => state.tasks);
+  const columns = useKanbanStore((state) => state.columns || []);
+  const allTasks = useKanbanStore((state) => state.tasks || []);
 
   const searchQuery = useKanbanStore((state) => state.searchQuery || '');
   const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
@@ -82,7 +82,7 @@ export const Board: React.FC = () => {
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const foundTask = allTasks.find((t) => t.id === active.id);
+    const foundTask = allTasks.find((t) => t && t.id === active.id);
     if (foundTask) {
       setActiveTask(foundTask);
     }
@@ -96,18 +96,18 @@ export const Board: React.FC = () => {
     const overId = over.id as string;
     if (activeId === overId) return;
 
-    const activeTaskItem = allTasks.find((t) => t.id === activeId);
+    const activeTaskItem = allTasks.find((t) => t && t.id === activeId);
     if (!activeTaskItem) return;
 
     // 1. Kéo qua một Task ở cột khác
-    const overTaskItem = allTasks.find((t) => t.id === overId);
+    const overTaskItem = allTasks.find((t) => t && t.id === overId);
     if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
       moveTask(activeId, overId);
       return;
     }
 
     // 2. Kéo qua một Column khác (ví dụ cột rỗng)
-    const overColumnItem = columns.find((c) => c.id === overId);
+    const overColumnItem = columns.find((c) => c && c.id === overId);
     if (overColumnItem && activeTaskItem.columnId !== overColumnItem.id) {
       moveTask(activeId, overId);
       return;
@@ -190,7 +190,7 @@ export const Board: React.FC = () => {
 
   // Count tasks in column to be deleted for warning message
   const tasksInColumnToDelete = columnToDelete
-    ? allTasks.filter((t) => t.columnId === columnToDelete.id).length
+    ? allTasks.filter((t) => t && t.columnId === columnToDelete.id).length
     : 0;
 
   return (
@@ -203,12 +203,12 @@ export const Board: React.FC = () => {
     >
       <div className="flex-1 overflow-x-auto p-4 sm:p-6">
         <div className="flex items-start gap-5 min-w-max pb-6">
-          {columns.map((column) => {
+          {(columns || []).filter(Boolean).map((column) => {
             const columnDisplayedTasks = filteredTasks.filter(
-              (task) => task.columnId === column.id
+              (task) => task && task.columnId === column.id
             );
             const columnTotalTasks = allTasks.filter(
-              (task) => task.columnId === column.id
+              (task) => task && task.columnId === column.id
             );
 
             return (

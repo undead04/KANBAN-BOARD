@@ -4,8 +4,8 @@ import { ThemeToggle } from './ThemeToggle';
 import { useKanbanStore } from '../../store/kanbanStore';
 
 export const Header: React.FC = () => {
-  const columnsCount = useKanbanStore((state) => state.columns.length);
-  const tasksCount = useKanbanStore((state) => state.tasks.length);
+  const columnsCount = useKanbanStore((state) => state.columns?.length ?? 0);
+  const tasksCount = useKanbanStore((state) => state.tasks?.length ?? 0);
   const resetToInitialData = useKanbanStore((state) => state.resetToInitialData);
 
   const handleReset = () => {

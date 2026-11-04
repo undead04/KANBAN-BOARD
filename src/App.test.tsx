@@ -33,7 +33,9 @@ describe('App & Board UI Integration Tests', () => {
     // Search input
     expect(container.querySelector('input[placeholder*="Tìm theo tiêu đề"]')).not.toBeNull();
 
-    root.unmount();
+    await act(async () => {
+      root.unmount();
+    });
     container.remove();
   });
 
@@ -76,7 +78,9 @@ describe('App & Board UI Integration Tests', () => {
     expect(container.innerHTML).toContain('Legacy Column');
     expect(container.innerHTML).toContain('Legacy Task Title');
 
-    root.unmount();
+    await act(async () => {
+      root.unmount();
+    });
     container.remove();
   });
 
@@ -108,7 +112,105 @@ describe('App & Board UI Integration Tests', () => {
 
     expect(container.innerHTML).toContain('Thiết kế giao diện Dark Mode');
 
-    root.unmount();
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('safely handles corrupted null/empty columns and tasks in localStorage without crash', async () => {
+    localStorage.setItem('kanban-board-storage', JSON.stringify({
+      state: {
+        columns: null,
+        tasks: null
+      },
+      version: 0
+    }));
+
+    await act(async () => {
+      useKanbanStore.persist.rehydrate();
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    expect(container.innerHTML).toContain('Kanban Flow');
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('safely handles non-array / primitive types in localStorage without crash', async () => {
+    localStorage.setItem('kanban-board-storage', JSON.stringify({
+      state: {
+        columns: 'not-an-array',
+        tasks: 12345
+      },
+      version: 0
+    }));
+
+    await act(async () => {
+      useKanbanStore.persist.rehydrate();
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    expect(container.innerHTML).toContain('Kanban Flow');
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it('safely handles null elements in tasks array without blank screen', async () => {
+    localStorage.setItem('kanban-board-storage', JSON.stringify({
+      state: {
+        columns: [{ id: 'col-1', title: 'Column 1', order: 0 }],
+        tasks: [
+          null,
+          {
+            id: 'task-valid',
+            columnId: 'col-1',
+            title: 'Valid Task',
+            description: '',
+            priority: 'low',
+            colorTag: 'sky',
+            createdAt: ''
+          },
+          undefined
+        ]
+      },
+      version: 0
+    }));
+
+    await act(async () => {
+      useKanbanStore.persist.rehydrate();
+    });
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    expect(container.innerHTML).toContain('Valid Task');
+    await act(async () => {
+      root.unmount();
+    });
     container.remove();
   });
 });

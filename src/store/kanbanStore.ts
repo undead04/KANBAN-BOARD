@@ -48,7 +48,9 @@ export function filterTasks(
   const safePriority = priorityFilter || 'all';
   const safeTag = tagFilter || 'all';
 
-  return (tasks || []).filter((task) => {
+  return (tasks || []).filter((task): task is Task => {
+    if (!task || typeof task !== 'object') return false;
+
     // 1. Kiểm tra từ khóa
     if (query) {
       const matchTitle = (task.title || '').toLowerCase().includes(query);
@@ -126,41 +128,45 @@ export const useKanbanStore = create<KanbanState>()(
 
       updateTask: (id: string, updates: UpdateTaskInput) => {
         set((state) => ({
-          tasks: state.tasks.map((task) =>
-            task.id === id ? { ...task, ...updates } : task
+          tasks: (state.tasks || []).map((task) =>
+            task && task.id === id ? { ...task, ...updates } : task
           ),
         }));
       },
 
       deleteTask: (id: string) => {
         set((state) => ({
-          tasks: state.tasks.filter((task) => task.id !== id),
+          tasks: (state.tasks || []).filter((task) => task && task.id !== id),
         }));
       },
 
       moveTask: (activeId: string, overId: string) => {
-        if (activeId === overId) return;
+        if (!activeId || !overId || activeId === overId) return;
 
         set((state) => {
-          const activeTask = state.tasks.find((t) => t.id === activeId);
+          const tasks = state.tasks || [];
+          const columns = state.columns || [];
+          const activeTask = tasks.find((t) => t && t.id === activeId);
           if (!activeTask) return state;
 
           // Trường hợp 1: Thả lên trên một Task khác
-          const overTask = state.tasks.find((t) => t.id === overId);
+          const overTask = tasks.find((t) => t && t.id === overId);
           if (overTask) {
-            const activeIndex = state.tasks.findIndex((t) => t.id === activeId);
-            const overIndex = state.tasks.findIndex((t) => t.id === overId);
+            const activeIndex = tasks.findIndex((t) => t && t.id === activeId);
+            const overIndex = tasks.findIndex((t) => t && t.id === overId);
+
+            if (activeIndex === -1 || overIndex === -1) return state;
 
             // Cùng cột: chỉ sắp xếp lại vị trí
             if (activeTask.columnId === overTask.columnId) {
               return {
-                tasks: arrayMove(state.tasks, activeIndex, overIndex),
+                tasks: arrayMove(tasks, activeIndex, overIndex),
               };
             }
 
             // Khác cột: cập nhật columnId và đưa vào vị trí overIndex
             const updatedTask = { ...activeTask, columnId: overTask.columnId };
-            const newTasks = [...state.tasks];
+            const newTasks = [...tasks];
             newTasks[activeIndex] = updatedTask;
             return {
               tasks: arrayMove(newTasks, activeIndex, overIndex),
@@ -168,12 +174,12 @@ export const useKanbanStore = create<KanbanState>()(
           }
 
           // Trường hợp 2: Thả vào một Column (ví dụ: cột rỗng hoặc vùng đệm cột)
-          const overColumn = state.columns.find((c) => c.id === overId);
+          const overColumn = columns.find((c) => c && c.id === overId);
           if (overColumn) {
             if (activeTask.columnId === overColumn.id) return state;
 
             const updatedTask = { ...activeTask, columnId: overColumn.id };
-            const filtered = state.tasks.filter((t) => t.id !== activeId);
+            const filtered = tasks.filter((t) => t && t.id !== activeId);
 
             // Tìm vị trí thẻ cuối cùng của cột đích để chèn vào sau
             const lastIndexInColumn = filtered
@@ -196,13 +202,14 @@ export const useKanbanStore = create<KanbanState>()(
       },
 
       addColumn: (title: string) => {
-        const trimmedTitle = title.trim();
+        const trimmedTitle = (title || '').trim();
         if (!trimmedTitle) return;
 
         set((state) => {
+          const columns = state.columns || [];
           const maxOrder =
-            state.columns.length > 0
-              ? Math.max(...state.columns.map((c) => c.order))
+            columns.length > 0
+              ? Math.max(...columns.map((c) => (c ? c.order : 0)))
               : 0;
 
           const newColumn: Column = {
@@ -212,26 +219,26 @@ export const useKanbanStore = create<KanbanState>()(
           };
 
           return {
-            columns: [...state.columns, newColumn],
+            columns: [...columns, newColumn],
           };
         });
       },
 
       updateColumn: (id: string, title: string) => {
-        const trimmedTitle = title.trim();
+        const trimmedTitle = (title || '').trim();
         if (!trimmedTitle) return;
 
         set((state) => ({
-          columns: state.columns.map((col) =>
-            col.id === id ? { ...col, title: trimmedTitle } : col
+          columns: (state.columns || []).map((col) =>
+            col && col.id === id ? { ...col, title: trimmedTitle } : col
           ),
         }));
       },
 
       deleteColumn: (id: string) => {
         set((state) => ({
-          columns: state.columns.filter((col) => col.id !== id),
-          tasks: state.tasks.filter((task) => task.columnId !== id),
+          columns: (state.columns || []).filter((col) => col && col.id !== id),
+          tasks: (state.tasks || []).filter((task) => task && task.columnId !== id),
         }));
       },
 
@@ -253,10 +260,45 @@ export const useKanbanStore = create<KanbanState>()(
         tasks: state.tasks,
       }),
       merge: (persistedState: unknown, currentState: KanbanState) => {
-        const typedPersisted = (persistedState as Partial<KanbanState>) || {};
+        if (!persistedState || typeof persistedState !== 'object') {
+          return {
+            ...currentState,
+            searchQuery: '',
+            priorityFilter: 'all',
+            tagFilter: 'all',
+          };
+        }
+
+        const typedPersisted = persistedState as Partial<KanbanState>;
+
+        const validColumns = Array.isArray(typedPersisted.columns)
+          ? typedPersisted.columns.filter(
+              (c): c is Column =>
+                Boolean(c && typeof c === 'object' && c.id && c.title)
+            )
+          : null;
+
+        const validTasks = Array.isArray(typedPersisted.tasks)
+          ? typedPersisted.tasks
+              .filter(
+                (t): t is Task =>
+                  Boolean(t && typeof t === 'object' && t.id && t.columnId && t.title)
+              )
+              .map((t) => ({
+                ...t,
+                priority: t.priority || 'medium',
+                colorTag: t.colorTag || 'sky',
+                description: t.description || '',
+              }))
+          : null;
+
         return {
           ...currentState,
-          ...typedPersisted,
+          columns:
+            validColumns && validColumns.length > 0
+              ? validColumns
+              : currentState.columns,
+          tasks: validTasks !== null ? validTasks : currentState.tasks,
           // Đảm bảo các trường filter luôn có giá trị mặc định hợp lệ khi nạp từ storage cũ
           searchQuery: '',
           priorityFilter: 'all',

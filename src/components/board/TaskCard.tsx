@@ -50,6 +50,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDelete,
   isOverlay = false,
 }) => {
+  if (!task) return null;
+
   const priorityInfo = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const tagColorClass = COLOR_TAG_MAP[task.colorTag] || 'bg-slate-400';
 
