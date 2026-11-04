@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -15,15 +15,32 @@ import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { ColumnContainer } from './ColumnContainer';
 import { TaskCard } from './TaskCard';
 import { Plus } from 'lucide-react';
-import { useKanbanStore } from '../../store/kanbanStore';
+import { useKanbanStore, filterTasks } from '../../store/kanbanStore';
 import type { Task, Priority, Column } from '../../types/kanban';
 import { TaskModal } from '../modals/TaskModal';
 import { ColumnModal } from '../modals/ColumnModal';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 export const Board: React.FC = () => {
-  const columns = useKanbanStore((state) => state.columns);
-  const tasks = useKanbanStore((state) => state.tasks);
+  const columns = useKanbanStore((state) => state.columns || []);
+  const allTasks = useKanbanStore((state) => state.tasks || []);
+
+  const searchQuery = useKanbanStore((state) => state.searchQuery || '');
+  const priorityFilter = useKanbanStore((state) => state.priorityFilter || 'all');
+  const tagFilter = useKanbanStore((state) => state.tagFilter || 'all');
+  const sortBy = useKanbanStore((state) => state.sortBy || 'manual');
+  const setSortBy = useKanbanStore((state) => state.setSortBy);
+
+  const filteredTasks = useMemo(
+    () => filterTasks(allTasks, searchQuery, priorityFilter, tagFilter, sortBy),
+    [allTasks, searchQuery, priorityFilter, tagFilter, sortBy]
+  );
+
+  const isFiltering =
+    (searchQuery || '').trim() !== '' ||
+    priorityFilter !== 'all' ||
+    tagFilter !== 'all' ||
+    sortBy !== 'manual';
 
   // Task actions
   const addTask = useKanbanStore((state) => state.addTask);
@@ -35,6 +52,7 @@ export const Board: React.FC = () => {
   const addColumn = useKanbanStore((state) => state.addColumn);
   const updateColumn = useKanbanStore((state) => state.updateColumn);
   const deleteColumn = useKanbanStore((state) => state.deleteColumn);
+  const sortColumnByPriority = useKanbanStore((state) => state.sortColumnByPriority);
 
   // Drag and drop state
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -59,7 +77,7 @@ export const Board: React.FC = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5, // Requires dragging 5px before starting drag, allowing pure clicks
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -69,49 +87,66 @@ export const Board: React.FC = () => {
 
   // Drag handlers
   const handleDragStart = (event: DragStartEvent) => {
-    const { active } = event;
-    const foundTask = tasks.find((t) => t.id === active.id);
-    if (foundTask) {
-      setActiveTask(foundTask);
+    try {
+      const { active } = event;
+      // Khi người dùng kéo thả thủ công, chuyển sang chế độ manual để không bị thuật toán auto-sort ép lại
+      if (sortBy !== 'manual') {
+        setSortBy('manual');
+      }
+      const foundTask = allTasks.find((t) => t && t.id === active.id);
+      if (foundTask) {
+        setActiveTask(foundTask);
+      }
+    } catch (err) {
+      console.error('Error in handleDragStart:', err);
     }
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
+    try {
+      const { active, over } = event;
+      if (!over) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    if (activeId === overId) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      if (!activeId || !overId || activeId === overId) return;
 
-    const activeTaskItem = tasks.find((t) => t.id === activeId);
-    if (!activeTaskItem) return;
+      const activeTaskItem = allTasks.find((t) => t && t.id === activeId);
+      if (!activeTaskItem) return;
 
-    // 1. Kéo qua một Task ở cột khác
-    const overTaskItem = tasks.find((t) => t.id === overId);
-    if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
-      moveTask(activeId, overId);
-      return;
-    }
+      // 1. Kéo qua một Task ở cột khác
+      const overTaskItem = allTasks.find((t) => t && t.id === overId);
+      if (overTaskItem && activeTaskItem.columnId !== overTaskItem.columnId) {
+        moveTask(activeId, overId);
+        return;
+      }
 
-    // 2. Kéo qua một Column khác (ví dụ cột rỗng)
-    const overColumnItem = columns.find((c) => c.id === overId);
-    if (overColumnItem && activeTaskItem.columnId !== overColumnItem.id) {
-      moveTask(activeId, overId);
-      return;
+      // 2. Kéo qua một Column khác (ví dụ cột rỗng)
+      const overColumnItem = columns.find((c) => c && c.id === overId);
+      if (overColumnItem && activeTaskItem.columnId !== overColumnItem.id) {
+        moveTask(activeId, overId);
+        return;
+      }
+    } catch (err) {
+      console.error('Error in handleDragOver:', err);
     }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveTask(null);
+    try {
+      const { active, over } = event;
+      setActiveTask(null);
 
-    if (!over) return;
-    const activeId = active.id as string;
-    const overId = over.id as string;
+      if (!over) return;
+      const activeId = active.id as string;
+      const overId = over.id as string;
 
-    if (activeId !== overId) {
-      moveTask(activeId, overId);
+      if (activeId && overId && activeId !== overId) {
+        moveTask(activeId, overId);
+      }
+    } catch (err) {
+      console.error('Error in handleDragEnd:', err);
+      setActiveTask(null);
     }
   };
 
@@ -178,7 +213,7 @@ export const Board: React.FC = () => {
 
   // Count tasks in column to be deleted for warning message
   const tasksInColumnToDelete = columnToDelete
-    ? tasks.filter((t) => t.columnId === columnToDelete.id).length
+    ? (allTasks || []).filter((t) => t && t.columnId === columnToDelete.id).length
     : 0;
 
   return (
@@ -189,20 +224,29 @@ export const Board: React.FC = () => {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex-1 overflow-x-auto p-6">
+      <div className="flex-1 overflow-x-auto p-4 sm:p-6">
         <div className="flex items-start gap-5 min-w-max pb-6">
-          {columns.map((column) => {
-            const columnTasks = tasks.filter((task) => task.columnId === column.id);
+          {columns.filter(Boolean).map((column) => {
+            const columnDisplayedTasks = filteredTasks.filter(
+              (task) => task && task.columnId === column.id
+            );
+            const columnTotalTasks = allTasks.filter(
+              (task) => task && task.columnId === column.id
+            );
+
             return (
               <ColumnContainer
                 key={column.id}
                 column={column}
-                tasks={columnTasks}
+                tasks={columnDisplayedTasks}
+                totalCount={columnTotalTasks.length}
+                isFiltering={isFiltering}
                 onAddTask={handleOpenAddTask}
                 onEditTask={handleOpenEditTask}
                 onDeleteTask={handleOpenDeleteTask}
                 onRenameColumn={handleRenameColumn}
                 onDeleteColumn={handleOpenDeleteColumn}
+                onSortPriority={(colId) => sortColumnByPriority(colId, 'desc')}
               />
             );
           })}
@@ -218,13 +262,8 @@ export const Board: React.FC = () => {
           </button>
         </div>
 
-        {/* Drag Overlay Preview */}
-        <DragOverlay
-          dropAnimation={{
-            duration: 200,
-            easing: 'ease',
-          }}
-        >
+        {/* Drag Overlay Preview with null dropAnimation to prevent race-condition crashes */}
+        <DragOverlay dropAnimation={null}>
           {activeTask ? <TaskCard task={activeTask} isOverlay /> : null}
         </DragOverlay>
 

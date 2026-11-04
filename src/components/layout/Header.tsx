@@ -4,8 +4,8 @@ import { ThemeToggle } from './ThemeToggle';
 import { useKanbanStore } from '../../store/kanbanStore';
 
 export const Header: React.FC = () => {
-  const columnsCount = useKanbanStore((state) => state.columns.length);
-  const tasksCount = useKanbanStore((state) => state.tasks.length);
+  const columnsCount = useKanbanStore((state) => state.columns?.length ?? 0);
+  const tasksCount = useKanbanStore((state) => state.tasks?.length ?? 0);
   const resetToInitialData = useKanbanStore((state) => state.resetToInitialData);
 
   const handleReset = () => {
@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
               </h1>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                 <Sparkles className="w-3 h-3" />
-                Milestone 3: Task CRUD
+                Vibe Coding MVP
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -46,7 +46,7 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={handleReset}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs flex items-center gap-1.5 text-xs font-medium"
+            className="p-2 sm:px-3 sm:py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shadow-xs flex items-center gap-1.5 text-xs font-medium cursor-pointer"
             title="Khôi phục về dữ liệu mẫu ban đầu"
           >
             <RotateCcw className="w-3.5 h-3.5" />

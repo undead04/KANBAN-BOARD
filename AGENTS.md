@@ -7,7 +7,7 @@ Hướng dẫn dành riêng cho AI Agent khi phát triển dự án Kanban Board
 - **Styling:** Tailwind CSS (Class-based Dark mode), Lucide React
 - **Drag & Drop:** `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`
 - **State & Storage:** Zustand kèm middleware `persist` (lưu `localStorage`)
-- *Chi tiết:* [docs/SPEC.md](docs/SPEC.md) & [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- *Chi tiết:* [docs/README.md](docs/README.md) & [docs/01-architecture/](docs/01-architecture/)
 
 ## 2. Lệnh vận hành
 - Chạy dev server: `npm run dev`
@@ -31,7 +31,7 @@ Hướng dẫn dành riêng cho AI Agent khi phát triển dự án Kanban Board
 - **Cấm** nhảy cóc milestone: Phải chạy và kiểm chứng xong bước hiện tại mới làm bước sau.
 
 ## 6. Quy trình triển khai & Kích hoạt Skills
-- Thực hiện tuần tự 6 milestones trong [docs/PLAN.md](docs/PLAN.md).
+- Thực hiện tuần tự các milestones trong [docs/02-features/kanban-core/plan.md](docs/02-features/kanban-core/plan.md).
 - Gặp lỗi: Tự đọc log terminal/console, tự sửa đến khi chạy được mới báo hoàn thành.
 - **Khi viết Test:** Bắt buộc kích hoạt skill `.gemini/skills/rigorous-testing/` (test theo SPEC, bao phủ edge cases, cấm viết test xuôi theo code).
 - **Khi làm việc với Git:** Tuân thủ skill `.gemini/skills/github-workflow/` (tách branch trước khi code, commit ở local; chỉ push/PR khi được yêu cầu).

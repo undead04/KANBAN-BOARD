@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Column } from '../../types/kanban';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, ArrowDownWideNarrow } from 'lucide-react';
 
 interface ColumnHeaderProps {
   column: Column;
-  taskCount: number;
+  taskCount: string | number;
   onRename: (columnId: string, newTitle: string) => void;
   onDelete: (column: Column) => void;
+  onSortPriority?: (columnId: string) => void;
 }
 
 export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
@@ -14,6 +15,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
   taskCount,
   onRename,
   onDelete,
+  onSortPriority,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(column.title);
@@ -106,7 +108,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
         <button
           type="button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
-          className={`p-1 rounded-lg transition ${
+          className={`p-1 rounded-lg transition cursor-pointer ${
             isMenuOpen
               ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200'
               : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800'
@@ -119,7 +121,7 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
 
         {/* Dropdown Popover */}
         {isMenuOpen && (
-          <div className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100">
             <button
               type="button"
               onClick={() => {
@@ -131,7 +133,23 @@ export const ColumnHeader: React.FC<ColumnHeaderProps> = ({
               <Pencil className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               Đổi tên cột
             </button>
+
+            {onSortPriority && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onSortPriority(column.id);
+                }}
+                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors cursor-pointer text-left font-medium"
+              >
+                <ArrowDownWideNarrow className="w-3.5 h-3.5" />
+                Sắp xếp ưu tiên (Cao ➔ Thấp)
+              </button>
+            )}
+
             <div className="my-1 border-t border-slate-100 dark:border-slate-700/60" />
+
             <button
               type="button"
               onClick={() => {
