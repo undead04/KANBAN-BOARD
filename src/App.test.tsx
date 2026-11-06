@@ -213,4 +213,42 @@ describe('App & Board UI Integration Tests', () => {
     });
     container.remove();
   });
+
+  it('displays real-time card locking badge and pulsing indicator when task is locked by remote user', async () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<App />);
+    });
+
+    // Verify simulate button exists on Header
+    const simButton = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Khóa Thẻ')
+    );
+    expect(simButton).not.toBeNull();
+
+    // Click to simulate lock
+    await act(async () => {
+      simButton?.click();
+    });
+
+    // Check UI: Lock badge should appear on the first card
+    expect(container.innerHTML).toContain('Nguyễn Văn B (Remote) đang giữ...');
+    expect(container.innerHTML).toContain('Đang khóa');
+
+    // Click again to release lock
+    await act(async () => {
+      simButton?.click();
+    });
+
+    // Check UI: Lock badge disappears
+    expect(container.innerHTML).not.toContain('Nguyễn Văn B (Remote) đang giữ...');
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });
